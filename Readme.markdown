@@ -58,6 +58,6 @@ License
 -------
 
 Copyright © 2020 Project Nayuki. (MIT License)  
-[https://www.nayuki.io/page/qr-code-generator-library](https://www.nayuki.io/page/qr-code-generator-library)
+
 
 
