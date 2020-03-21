@@ -32,7 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
-
+import org.checkerframework.checker.signedness.qual.*;
 
 public final class QrCodeGeneratorWorker {
 	
@@ -69,7 +69,10 @@ public final class QrCodeGeneratorWorker {
 		int minVersion = input.nextInt();
 		int maxVersion = input.nextInt();
 		int mask       = input.nextInt();
-		int boostEcl   = input.nextInt();
+		/*Scanner class 'input' is unable to take input as Unsigned here.Therefore error is occurring.
+		  The error will not occur when PR-#2679 will get merged */
+		@SuppressWarnings("signedness")
+		@Unsigned int boostEcl   = input.nextInt();
 		if (!(0 <= errCorLvl && errCorLvl <= 3) || !(-1 <= mask && mask <= 7) || (boostEcl >>> 1) != 0
 				|| !(QrCode.MIN_VERSION <= minVersion && minVersion <= maxVersion && maxVersion <= QrCode.MAX_VERSION))
 			throw new RuntimeException();
