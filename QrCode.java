@@ -1,25 +1,3 @@
-/* 
- * QR Code generator library (Java)
- * 
- * Copyright (c) Project Nayuki. (MIT License)
- * https://www.nayuki.io/page/qr-code-generator-library
- * 
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
- * the Software, and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- * - The above copyright notice and this permission notice shall be included in
- *   all copies or substantial portions of the Software.
- * - The Software is provided "as is", without warranty of any kind, express or
- *   implied, including but not limited to the warranties of merchantability,
- *   fitness for a particular purpose and noninfringement. In no event shall the
- *   authors or copyright holders be liable for any claim, damages or other
- *   liability, whether in an action of contract, tort or otherwise, arising from,
- *   out of or in connection with the Software or the use or other dealings in the
- *   Software.
- */
 
 package io.nayuki.qrcodegen;
 
@@ -27,7 +5,8 @@ import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-
+import org.checkerframework.checker.signedness.qual.*;
+import org.checkerframework.common.value.qual.*;
 
 /**
  * A QR Code symbol, which is a type of two-dimension barcode.
@@ -190,7 +169,7 @@ public final class QrCode {
 			bb.appendBits(padByte, 8);
 		
 		// Pack bits into bytes in big endian
-		byte[] dataCodewords = new byte[bb.bitLength() / 8];
+		@Unsigned  byte[] dataCodewords = new byte[bb.bitLength() / 8];
 		for (int i = 0; i < bb.bitLength(); i++)
 			dataCodewords[i >>> 3] |= bb.getBit(i) << (7 - (i & 7));
 		
@@ -246,7 +225,7 @@ public final class QrCode {
 	 * @throws IllegalArgumentException if the version or mask value is out of range,
 	 * or if the data is the wrong length for the specified version and error correction level
 	 */
-	public QrCode(int ver, Ecc ecl, byte[] dataCodewords, int msk) {
+	public QrCode(int ver, Ecc ecl,@Unsigned byte[] dataCodewords, int msk) {
 		// Check arguments and initialize fields
 		if (ver < MIN_VERSION || ver > MAX_VERSION)
 			throw new IllegalArgumentException("Version value out of range");
@@ -261,7 +240,7 @@ public final class QrCode {
 		
 		// Compute ECC, draw modules, do masking
 		drawFunctionPatterns();
-		byte[] allCodewords = addEccAndInterleave(dataCodewords);
+		@Unsigned byte[] allCodewords = addEccAndInterleave(dataCodewords);
 		drawCodewords(allCodewords);
 		this.mask = handleConstructorMasking(msk);
 		isFunction = null;
@@ -382,13 +361,13 @@ public final class QrCode {
 	
 	// Draws two copies of the format bits (with its own error correction code)
 	// based on the given mask and this object's error correction level field.
-	private void drawFormatBits(int msk) {
+	private void drawFormatBits(@IntRange(from=0, to=7) int msk) {
 		// Calculate error correction code and pack bits
-		int data = errorCorrectionLevel.formatBits << 3 | msk;  // errCorrLvl is uint2, mask is uint3
-		int rem = data;
+		@Unsigned int data = errorCorrectionLevel.formatBits << 3 | msk;  // errCorrLvl is uint2, mask is uint3
+		@Unsigned int rem = data;
 		for (int i = 0; i < 10; i++)
 			rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
-		int bits = (data << 10 | rem) ^ 0x5412;  // uint15
+		@Unsigned int bits = (data << 10 | rem) ^ 0x5412;  // uint15
 		assert bits >>> 15 == 0;
 		
 		// Draw first copy
@@ -469,7 +448,7 @@ public final class QrCode {
 	
 	// Returns a new byte string representing the given data with the appropriate error correction
 	// codewords appended to it, based on this object's version and error correction level.
-	private byte[] addEccAndInterleave(byte[] data) {
+	private @Unsigned byte[] addEccAndInterleave(@Unsigned byte[] data) {
 		Objects.requireNonNull(data);
 		if (data.length != getNumDataCodewords(version, errorCorrectionLevel))
 			throw new IllegalArgumentException();
@@ -482,19 +461,19 @@ public final class QrCode {
 		int shortBlockLen = rawCodewords / numBlocks;
 		
 		// Split data into blocks and append ECC to each block
-		byte[][] blocks = new byte[numBlocks][];
-		byte[] rsDiv = reedSolomonComputeDivisor(blockEccLen);
+		@Unsigned byte[][] blocks = new @Unsigned byte[numBlocks][];
+		@Unsigned byte[] rsDiv = reedSolomonComputeDivisor(blockEccLen);
 		for (int i = 0, k = 0; i < numBlocks; i++) {
-			byte[] dat = Arrays.copyOfRange(data, k, k + shortBlockLen - blockEccLen + (i < numShortBlocks ? 0 : 1));
+			@Unsigned byte[] dat = Arrays.copyOfRange(data, k, k + shortBlockLen - blockEccLen + (i < numShortBlocks ? 0 : 1));
 			k += dat.length;
-			byte[] block = Arrays.copyOf(dat, shortBlockLen + 1);
-			byte[] ecc = reedSolomonComputeRemainder(dat, rsDiv);
+			@Unsigned byte[] block = Arrays.copyOf(dat, shortBlockLen + 1);
+			@Unsigned byte[] ecc = reedSolomonComputeRemainder(dat, rsDiv);
 			System.arraycopy(ecc, 0, block, block.length - blockEccLen, ecc.length);
 			blocks[i] = block;
 		}
 		
 		// Interleave (not concatenate) the bytes from every block into a single sequence
-		byte[] result = new byte[rawCodewords];
+		@Unsigned byte[] result = new byte[rawCodewords];
 		for (int i = 0, k = 0; i < blocks[0].length; i++) {
 			for (int j = 0; j < blocks.length; j++) {
 				// Skip the padding byte in short blocks
@@ -510,12 +489,12 @@ public final class QrCode {
 	
 	// Draws the given sequence of 8-bit codewords (data and error correction) onto the entire
 	// data area of this QR Code. Function modules need to be marked off before this is called.
-	private void drawCodewords(byte[] data) {
+	private void drawCodewords(@Unsigned byte[] data) {
 		Objects.requireNonNull(data);
 		if (data.length != getNumRawDataModules(version) / 8)
 			throw new IllegalArgumentException();
 		
-		int i = 0;  // Bit index into the data
+		@Unsigned int i = 0;  // Bit index into the data
 		// Do the funny zigzag scan
 		for (int right = size - 1; right >= 1; right -= 2) {  // Index of right column in each column pair
 			if (right == 6)
@@ -569,7 +548,7 @@ public final class QrCode {
 	// A messy helper function for the constructor. This QR Code must be in an unmasked state when this
 	// method is called. The given argument is the requested mask, which is -1 for auto or 0 to 7 for fixed.
 	// This method applies and returns the actual mask chosen, from 0 to 7.
-	private int handleConstructorMasking(int msk) {
+	private int handleConstructorMasking(@IntRange(from=-1, to=7) int msk) {
 		if (msk == -1) {  // Automatically choose best mask
 			int minPenalty = Integer.MAX_VALUE;
 			for (int i = 0; i < 8; i++) {
@@ -720,18 +699,18 @@ public final class QrCode {
 	
 	// Returns a Reed-Solomon ECC generator polynomial for the given degree. This could be
 	// implemented as a lookup table over all possible parameter values, instead of as an algorithm.
-	private static byte[] reedSolomonComputeDivisor(int degree) {
+	private static @Unsigned byte[] reedSolomonComputeDivisor(int degree) {
 		if (degree < 1 || degree > 255)
 			throw new IllegalArgumentException("Degree out of range");
 		// Polynomial coefficients are stored from highest to lowest power, excluding the leading term which is always 1.
 		// For example the polynomial x^3 + 255x^2 + 8x + 93 is stored as the uint8 array {255, 8, 93}.
-		byte[] result = new byte[degree];
+		@Unsigned byte[] result = new byte[degree];
 		result[degree - 1] = 1;  // Start off with the monomial x^0
 		
 		// Compute the product polynomial (x - r^0) * (x - r^1) * (x - r^2) * ... * (x - r^{degree-1}),
 		// and drop the highest monomial term which is always 1x^degree.
 		// Note that r = 0x02, which is a generator element of this field GF(2^8/0x11D).
-		int root = 1;
+		@Unsigned int root = 1;
 		for (int i = 0; i < degree; i++) {
 			// Multiply the current product by (x - r^i)
 			for (int j = 0; j < result.length; j++) {
@@ -739,18 +718,18 @@ public final class QrCode {
 				if (j + 1 < result.length)
 					result[j] ^= result[j + 1];
 			}
-			root = reedSolomonMultiply(root, 0x02);
+			root = reedSolomonMultiply(1, 0x02);
 		}
 		return result;
 	}
 	
 	
 	// Returns the Reed-Solomon error correction codeword for the given data and divisor polynomials.
-	private static byte[] reedSolomonComputeRemainder(byte[] data, byte[] divisor) {
+	private static @Unsigned byte[] reedSolomonComputeRemainder(@Unsigned byte[] data, byte[] divisor) {
 		Objects.requireNonNull(data);
 		Objects.requireNonNull(divisor);
-		byte[] result = new byte[divisor.length];
-		for (byte b : data) {  // Polynomial division
+		@Unsigned byte[] result = new byte[divisor.length];
+		for (@Unsigned byte b : data) {  // Polynomial division
 			int factor = (b ^ result[0]) & 0xFF;
 			System.arraycopy(result, 1, result, 0, result.length - 1);
 			result[result.length - 1] = 0;
@@ -763,10 +742,10 @@ public final class QrCode {
 	
 	// Returns the product of the two given field elements modulo GF(2^8/0x11D). The arguments and result
 	// are unsigned 8-bit integers. This could be implemented as a lookup table of 256*256 entries of uint8.
-	private static int reedSolomonMultiply(int x, int y) {
+	private static @Unsigned int reedSolomonMultiply((@IntRange(from=0, to=255) int x,(@IntRange(from=0, to=255) int y) {
 		assert x >> 8 == 0 && y >> 8 == 0;
 		// Russian peasant multiplication
-		int z = 0;
+		@Unsigned int z = 0;
 		for (int i = 7; i >= 0; i--) {
 			z = (z << 1) ^ ((z >>> 7) * 0x11D);
 			z ^= ((y >>> i) & 1) * x;
@@ -819,7 +798,7 @@ public final class QrCode {
 	
 	
 	// Returns true iff the i'th bit of x is set to 1.
-	static boolean getBit(int x, int i) {
+	static boolean getBit(@Unsigned int x, int i) {
 		return ((x >>> i) & 1) != 0;
 	}
 	
@@ -874,10 +853,10 @@ public final class QrCode {
 		/** The QR Code can tolerate about 30% erroneous codewords. */ HIGH(2);
 		
 		// In the range 0 to 3 (unsigned 2-bit integer).
-		final int formatBits;
+		final @Unsigned int formatBits;
 		
 		// Constructor.
-		private Ecc(int fb) {
+		private Ecc(@Unsigned int fb) {
 			formatBits = fb;
 		}
 	}
