@@ -1,31 +1,11 @@
-/* 
- * QR Code generator library (Java)
- * 
- * Copyright (c) Project Nayuki. (MIT License)
- * https://www.nayuki.io/page/qr-code-generator-library
- * 
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
- * the Software, and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- * - The above copyright notice and this permission notice shall be included in
- *   all copies or substantial portions of the Software.
- * - The Software is provided "as is", without warranty of any kind, express or
- *   implied, including but not limited to the warranties of merchantability,
- *   fitness for a particular purpose and noninfringement. In no event shall the
- *   authors or copyright holders be liable for any claim, damages or other
- *   liability, whether in an action of contract, tort or otherwise, arising from,
- *   out of or in connection with the Software or the use or other dealings in the
- *   Software.
- */
+
 
 package io.nayuki.qrcodegen;
 
 import java.util.BitSet;
 import java.util.Objects;
-
+import org.checkerframework.checker.signedness.qual.*;
+import org.checkerframework.common.value.qual.*;
 
 /**
  * An appendable sequence of bits (0s and 1s). Mainly used by {@link QrSegment}.
@@ -70,7 +50,7 @@ public final class BitBuffer implements Cloneable {
 	 * @return the bit at the specified index
 	 * @throws IndexOutOfBoundsException if index &lt; 0 or index &#x2265; bitLength
 	 */
-	public int getBit(int index) {
+	public @Unsigned int getBit(int index) {
 		if (index < 0 || index >= bitLength)
 			throw new IndexOutOfBoundsException();
 		return data.get(index) ? 1 : 0;
@@ -86,7 +66,7 @@ public final class BitBuffer implements Cloneable {
 	 * @throws IllegalStateException if appending the data
 	 * would make bitLength exceed Integer.MAX_VALUE
 	 */
-	public void appendBits(int val, int len) {
+	public void appendBits((@Unsigned int val, int len) {
 		if (len < 0 || len > 31 || val >>> len != 0)
 			throw new IllegalArgumentException("Value out of range");
 		if (Integer.MAX_VALUE - bitLength < len)
